@@ -20,11 +20,17 @@ export interface CategoryFormData {
   translations: CategoryTranslation[];
 }
 
-export interface CategorySearchQuery {
-  searchTerm?: string;
-  page: number;
-  size: number;
+
+export interface CategoryGetAllResult {
+  content: Category[];
+  page: {
+    size: number;
+    number: number;
+    totalElements: number;
+    totalPages: number;
+  };
 }
+
 
 export interface CategorySearchResult {
   content: Category[];
@@ -34,4 +40,11 @@ export interface CategorySearchResult {
   pageSize: number;
   hasNext: boolean;
   hasPrevious: boolean;
+}
+
+
+export interface CategorySearchQuery {
+  name: string;
+  page: number;
+  size: number;
 }

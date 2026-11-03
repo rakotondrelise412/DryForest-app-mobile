@@ -44,7 +44,6 @@ export default function CategoryForm({
   visible,
   category,
   loading,
-  language,
   onClose,
   onSubmit,
 }: CategoryFormProps) {
@@ -58,6 +57,11 @@ export default function CategoryForm({
 
   const isEditing = category !== null;
 
+  /**
+   * Initialise les champs à l'ouverture du formulaire.
+   * En modification, récupère les traductions existantes.
+   * En création, initialise les champs vides.
+   */
   useEffect(() => {
     if (!visible) return;
 
@@ -75,6 +79,9 @@ export default function CategoryForm({
     setError("");
   }, [visible, category]);
 
+  /**
+   * Prépare les traductions avant l'envoi.
+   */
   const handleSubmit = () => {
     const frenchName = names.FR.trim();
 
@@ -83,25 +90,46 @@ export default function CategoryForm({
       return;
     }
 
-    const translations = LANGUAGES
-      .filter(({ locale }) => names[locale].trim() !== "")
-      .map(({ locale }) => {
-        const existingTranslation = category?.translations.find(
-          (translation) => translation.locale === locale,
-        );
+    const translations = LANGUAGES.flatMap(({ locale }) => {
+      const existingTranslation = category?.translations.find(
+        (translation) => translation.locale === locale,
+      );
 
-        return {
-          ...(existingTranslation?.id
-            ? { id: existingTranslation.id }
-            : {}),
+      const name = names[locale].trim();
+
+      // En modification, conserver la traduction existante
+      // si le champ est laissé vide.
+      if (existingTranslation) {
+        return [
+          {
+            ...(existingTranslation.id != null
+              ? { id: existingTranslation.id }
+              : {}),
+            locale,
+            name: name || existingTranslation.name,
+          },
+        ];
+      }
+
+      // En création, ne pas envoyer les langues facultatives vides.
+      if (!name) {
+        return [];
+      }
+
+      return [
+        {
           locale,
-          name: names[locale].trim(),
-        };
-      });
+          name,
+        },
+      ];
+    });
 
     onSubmit({ translations });
   };
 
+  /**
+   * Met à jour le nom d'une langue.
+   */
   const handleNameChange = (locale: Locale, value: string) => {
     setNames((previous) => ({
       ...previous,

@@ -45,8 +45,11 @@ const SEARCH_DELAY = 400;
 
 export default function CategoriesScreen() {
   const { showToast } = useToast();
-
   const { language } = useLanguage();
+
+  // ============================================================
+  // ÉTATS
+  // ============================================================
 
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -60,7 +63,6 @@ export default function CategoriesScreen() {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE);
 
   const [formVisible, setFormVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] =
@@ -140,24 +142,35 @@ export default function CategoriesScreen() {
   // ============================================================
 
   const loadCategories = useCallback(
-    async (page = currentPage) => {
+    async (page: number) => {
       try {
         setLoading(true);
 
-        const query = {
-          searchTerm: debouncedSearch || undefined,
-          page,
-          size: pageSize,
-        };
+        if (debouncedSearch) {
+          // Recherche : POST /api/categories/search
+          const result: CategorySearchResult =
+            await categoryService.search({
+              name: debouncedSearch,
+              page,
+              size: PAGE_SIZE,
+            });
 
-        const result: CategorySearchResult =
-          await categoryService.search(query);
+          setCategories(result.content ?? []);
+          setTotalPages(result.totalPages);
+          setTotalElements(result.totalElements);
+        } else {
+          // Liste normale : GET /api/categories
+          const result = await categoryService.findAll(
+            page,
+            PAGE_SIZE,
+          );
 
-        setCategories(result.content ?? []);
-        setCurrentPage(result.pageNumber ?? page);
-        setTotalPages(result.totalPages ?? 0);
-        setTotalElements(result.totalElements ?? 0);
-        setPageSize(result.pageSize ?? PAGE_SIZE);
+          setCategories(result.content ?? []);
+          setTotalPages(result.page.totalPages);
+          setTotalElements(result.page.totalElements);
+        }
+
+        setCurrentPage(page);
       } catch (error: any) {
         showToast(
           error?.response?.data?.message ??
@@ -169,12 +182,16 @@ export default function CategoriesScreen() {
         setRefreshing(false);
       }
     },
-    [currentPage, debouncedSearch, pageSize, showToast],
+    [debouncedSearch, showToast],
   );
+
+  // ============================================================
+  // CHARGEMENT INITIAL ET RECHERCHE
+  // ============================================================
 
   useEffect(() => {
     loadCategories(0);
-  }, [debouncedSearch, loadCategories]);
+  }, [loadCategories]);
 
   // ============================================================
   // RAFRAÎCHISSEMENT
@@ -190,9 +207,14 @@ export default function CategoriesScreen() {
   // ============================================================
 
   const handlePageChange = (page: number) => {
-    if (page < 0 || page >= totalPages) return;
+    if (
+      page < 0 ||
+      page >= totalPages ||
+      page === currentPage
+    ) {
+      return;
+    }
 
-    setCurrentPage(page);
     loadCategories(page);
   };
 
@@ -222,7 +244,10 @@ export default function CategoriesScreen() {
       setSubmitting(true);
 
       if (selectedCategory) {
-        await categoryService.update(selectedCategory.id, data);
+        await categoryService.update(
+          selectedCategory.id,
+          data,
+        );
 
         showToast(
           "La catégorie a été modifiée avec succès.",
@@ -349,6 +374,8 @@ export default function CategoriesScreen() {
 
   return (
     <View style={styles.container}>
+      {/* RETOUR */}
+
       <TouchableOpacity
         onPress={() =>
           router.push("/(app)/settings/reference-data")
@@ -377,9 +404,13 @@ export default function CategoriesScreen() {
         </Text>
       </TouchableOpacity>
 
+      {/* EN-TÊTE */}
+
       <View style={styles.header}>
         <View style={styles.headerInfo}>
-          <Text style={styles.title}>Gestion des catégories</Text>
+          <Text style={styles.title}>
+            Gestion des catégories
+          </Text>
 
           <Text style={styles.subtitle}>
             {totalElements} catégorie(s) enregistrée(s)
@@ -391,7 +422,11 @@ export default function CategoriesScreen() {
           onPress={openCreateModal}
           activeOpacity={0.8}
         >
-          <Ionicons name="add" size={22} color={COLORS.white} />
+          <Ionicons
+            name="add"
+            size={22}
+            color={COLORS.white}
+          />
 
           <Text style={styles.addButtonText}>Ajouter</Text>
         </TouchableOpacity>
@@ -477,7 +512,7 @@ export default function CategoriesScreen() {
             currentPage={currentPage}
             totalPages={totalPages}
             totalElements={totalElements}
-            pageSize={pageSize}
+            pageSize={PAGE_SIZE}
             onPageChange={handlePageChange}
             disabled={loading}
           />
