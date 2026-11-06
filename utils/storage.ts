@@ -1,6 +1,24 @@
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import type { Locale } from "@/models/animal-category.model";
+
 const TOKEN_KEY = "access_token";
+const LANGUAGE_KEY = "app_language";
+
+const DEFAULT_LANGUAGE: Locale = "FR";
+
+// ============================================================
+// VALIDATION DE LA LANGUE
+// ============================================================
+
+const isValidLanguage = (value: string | null): value is Locale => {
+  return value === "FR" || value === "MG" || value === "EN";
+};
+
+// ============================================================
+// AUTHENTIFICATION
+// ============================================================
 
 export const saveToken = async (token: string): Promise<void> => {
   if (
@@ -33,4 +51,24 @@ export const getToken = async (): Promise<string | null> => {
 
 export const removeToken = async (): Promise<void> => {
   await AsyncStorage.removeItem(TOKEN_KEY);
+};
+
+// ============================================================
+// LANGUE DE L'APPLICATION
+// ============================================================
+
+export const saveLanguage = async (
+  language: Locale
+): Promise<void> => {
+  await AsyncStorage.setItem(LANGUAGE_KEY, language);
+};
+
+export const getSavedLanguage = async (): Promise<Locale> => {
+  const savedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
+
+  if (isValidLanguage(savedLanguage)) {
+    return savedLanguage;
+  }
+
+  return DEFAULT_LANGUAGE;
 };

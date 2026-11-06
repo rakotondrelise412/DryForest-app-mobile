@@ -20,6 +20,7 @@ module.exports = defineConfig([
 
     rules: {
       "import/no-unresolved": "off",
+      "react/no-unescaped-entities": "off",
     },
   },
 
